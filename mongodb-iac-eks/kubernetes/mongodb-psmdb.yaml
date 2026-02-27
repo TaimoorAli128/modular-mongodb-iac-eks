@@ -1,0 +1,41 @@
+
+apiVersion: psmdb.percona.com/v1
+kind: PerconaServerMongoDB
+metadata:
+  name: mongodb-production
+  namespace: database
+spec:
+  crVersion: "1.17.0"
+  image: percona/percona-server-mongodb:7.0
+  replsets:
+    - name: rs0
+      size: 3
+      affinity:
+        antiAffinityTopologyKey: "topology.kubernetes.io/zone"
+      nodeSelector:
+        workload: mongodb
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: mongodb
+          effect: NoSchedule
+      volumeSpec:
+        persistentVolumeClaim:
+          storageClassName: gp3-encrypted
+          resources:
+            requests:
+              storage: 50Gi
+  expose:
+    enabled: false
+  backup:
+    enabled: true
+    serviceAccountName: pbm-s3
+    image: percona/percona-backup-mongodb:2.6.0
+    storages:
+      s3-backups:
+        type: s3
+        s3:
+          bucket: REPLACE_ME_BUCKET
+          region: us-east-1
+          prefix: production
+          credentialsSecret: ""  # empty because we use IRSA
